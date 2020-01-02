@@ -2,12 +2,9 @@ import numpy as np
 import keras
 from scipy import ndimage
 
-
 class DataGenerator(keras.utils.Sequence):
-    'Generates data for Keras'
     def __init__(self, list_IDs, labels, batch_size=5, dim=(61,73,61), n_channels=1,
                  n_classes=2, shuffle=True):
-        'Initialization'
         self.dim = dim
         self.batch_size = batch_size
         self.labels = labels
@@ -30,12 +27,13 @@ class DataGenerator(keras.utils.Sequence):
         list_IDs_temp = [self.list_IDs[k] for k in indexes]
 
         # Generate data
-        orig_X, orig_y = self.__data_generation(list_IDs_temp)
-        aug_X, aug_y =self.__data_augmentation(list_IDs_temp)
+        orig_X, orig_Y = self.__data_generation(list_IDs_temp)
+        aug_X, aug_Y =self.__data_augmentation(list_IDs_temp)
+        
         X = np.concatenate((orig_X,aug_X),aixs=0)
-        y = np.concatenate((orig_y,aug_y),aixs=0)
+        Y = np.concatenate((orig_Y,aug_Y),aixs=0)
 
-        return X, y
+        return X, Y
 
     def on_epoch_end(self):
         'Updates indexes after each epoch'
@@ -44,11 +42,11 @@ class DataGenerator(keras.utils.Sequence):
             np.random.shuffle(self.indexes)
 
     def __data_generation(self, list_IDs_temp):
-        'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
+        'Generates data containing batch_size samples'
         # Initialization
         X = np.empty((self.batch_size, self.n_channels, *self.dim))
         y = np.empty((self.batch_size), dtype=int)
-
+        
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
             # Store sample
@@ -56,24 +54,42 @@ class DataGenerator(keras.utils.Sequence):
 
             # Store class
             y[i] = self.labels[ID]
+       Y = keras.utils.to_categorical(y, num_classes=self.n_classes)
 
-        return X, keras.utils.to_categorical(y, num_classes=self.n_classes)
+        return X, Y
+    
     def random_rotate(x):
+        'random rotate image along random axis within range [-20, 20]'
+        #define random angle
         angle=random.randint(-20,20)
+        #define random axis
         axes= random.sample((0,1,2),k=2)
+        
+        #perform rotation
         rotated_x=ndimage.rotate(x, angle=angle, axes=axes, reshape=False, order=3, mode='constant')
+        
         return rotated_x
+    
     def random_shift(x):
+        'random shift image along three axes within range [-10, 10]'
+        #define random shift value
         shift=[random.randint(-10,10),random.randint(-10,10),random.randint(-10,10)]
+        
+        #perform shift
         shifted_x=ndimage.shift(x, shift=shift, order=3, mode='constant', cval=0.0)
+        
         return shifted_x
+    
     def __data_augmentation(self,list_IDs_temp):
+        'perform data augmentation on batch of data loaded'
+        #initialization
         X = np.empty((self.batch_size, self.n_channels, *self.dim))
         shifted_X = np.empty((self.batch_size, self.n_channels, *self.dim))
         rotated_X = np.empty((self.batch_size, self.n_channels, *self.dim))
         shiftrotated_X = np.empty((self.batch_size, self.n_channels, *self.dim))
         y = np.empty((self.batch_size), dtype=int)
 
+        #load data and perform augmentation
         for i, ID in enumerate(list_IDs_temp):
             # Store sample
             X[i,] = np.load('data/' + ID + '.npy')
@@ -83,7 +99,11 @@ class DataGenerator(keras.utils.Sequence):
 
             # Store class
             y[i] = self.labels[ID]
-        aug_X=np.concatenate((shifted_X, rotated_X, shiftrotated_X),axis=0)
-        aug_y=np.concatenate((y,y,y),axis=0)
-        return aug_X, aug_y
+            
+        #concatenate augmented data together
+        aug_X = np.concatenate((shifted_X, rotated_X, shiftrotated_X),axis=0)
+        #concatenate labels for augmented data
+        aug_y = np.concatenate((y,y,y),axis=0)
+        aug_Y = keras.utils.to_categorical(aug_y, num_classes=self.n_classes)
+        return aug_X, aug_Y
         
