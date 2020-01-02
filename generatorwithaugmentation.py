@@ -34,7 +34,6 @@ class DataGenerator(keras.utils.Sequence):
         #combine original and sumented data
         X = np.concatenate((orig_X,aug_X),aixs=0)
         Y = np.concatenate((orig_Y,aug_Y),aixs=0)
-
         return X, Y
 
     def on_epoch_end(self):
@@ -56,8 +55,7 @@ class DataGenerator(keras.utils.Sequence):
 
             # Store class
             y[i] = self.labels[ID]
-       Y = keras.utils.to_categorical(y, num_classes=self.n_classes)
-
+        Y = keras.utils.to_categorical(y, num_classes=self.n_classes)
         return X, Y
     
     def random_rotate(x):
@@ -68,8 +66,7 @@ class DataGenerator(keras.utils.Sequence):
         axes= random.sample((0,1,2),k=2)
         
         #perform rotation
-        rotated_x=ndimage.rotate(x, angle=angle, axes=axes, reshape=False, order=3, mode='constant')
-        
+        rotated_x=ndimage.rotate(x, angle=angle, axes=axes, reshape=False, order=3, mode='constant')      
         return rotated_x
     
     def random_shift(x):
@@ -78,8 +75,7 @@ class DataGenerator(keras.utils.Sequence):
         shift=[random.randint(-10,10),random.randint(-10,10),random.randint(-10,10)]
         
         #perform shift
-        shifted_x=ndimage.shift(x, shift=shift, order=3, mode='constant', cval=0.0)
-        
+        shifted_x=ndimage.shift(x, shift=shift, order=3, mode='constant', cval=0.0)        
         return shifted_x
     
     def __data_augmentation(self,list_IDs_temp):
