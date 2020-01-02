@@ -61,30 +61,70 @@ class DataGenerator(keras.utils.Sequence):
     def random_rotate(x):
         'random rotate image along random axis within range [-20, 20]'
         #define random angle
-        angle=random.randint(-20,20)
+        angle = random.randint(-20,20)
         #define random axis
-        axes= random.sample((0,1,2),k=2)
+        axes = random.sample((0,1,2),k=2)
         
         #perform rotation
-        rotated_x=ndimage.rotate(x, angle=angle, axes=axes, reshape=False, order=3, mode='constant')      
+        rotated_x = ndimage.rotate(x, angle=angle, axes=axes, reshape=False, order=3, mode='constant')      
         return rotated_x
     
     def random_shift(x):
         'random shift image along three axes within range [-10, 10]'
         #define random shift value
-        shift=[random.randint(-10,10),random.randint(-10,10),random.randint(-10,10)]
+        shift = [random.randint(-10,10),random.randint(-10,10),random.randint(-10,10)]
         
         #perform shift
-        shifted_x=ndimage.shift(x, shift=shift, order=3, mode='constant', cval=0.0)        
+        shifted_x = ndimage.shift(x, shift=shift, order=3, mode='constant', cval=0.0)        
         return shifted_x
+
+    
+    def random_zoom_and_crop(x):
+        'random zoom image along three axes within range [0.9, 1.1]'
+        #define zoom value
+        zoom = [random.uniform(0.9,1.1),random.uniform(0.9,1.1),random.uniform(0.9,1.1)]
+        
+        #perform zoom
+        zoomed_x = ndimage.zoom(x, zoom, order=3, mode='constant', cval=0.0)
+        
+        #padding and crop
+        orig_shape = x.shape
+        zoom_shape = zoomed_x.shape
+        
+        if zoom[0] < 1:
+            padding_width=orig_shape[0]-zoom_shape[0]
+            z0 = np.zeros((padding_width, zommed_x.shape[1], zoomed_x.shape[2]), dtype=x.dtype)
+            x_x = np.concatenate((zoomed_x,z0),axis=0)
+        else:
+            seed = random.randint(0,zoom_shape[0]-orig_shape[0])
+            x_x = zoomed_x[seed:seed+origin_shape[0]][:][:]
+            
+        if zoom[1] < 1:
+            padding_width=orig_shape[1]-zoom_shape[1]
+            z0 = np.zeros((x_x.shape[1], padding_width,  x_x.shape[2]), dtype=x.dtype)
+            x_y = np.concatenate((x_x,z0),axis=1)
+        else:
+            seed = random.randint(0,zoom_shape[1]-orig_shape[1])
+            x_y = x_x[:][seed:seed+origin_shape[1]][:]
+            
+        if zoom[2] < 1:
+            padding_width=orig_shape[2]-zoom_shape[2]
+            z0 = np.zeros((x_y.shape[0], x_y.shape[1], padding_width), dtype=x.dtype)
+            x_z = np.concatenate((x_y,z0),axis=0)
+        else:
+            seed = random.randint(0,zoom_shape[0]-orig_shape[0])
+            x_z = x_y[seed:seed+origin_shape[0]][:][:]
+            
+        return x_z
+            
     
     def __data_augmentation(self,list_IDs_temp):
         'perform data augmentation on batch of data loaded'
         #initialization
-        X = np.empty((self.batch_size, self.n_channels, *self.dim))
-        shifted_X = np.empty((self.batch_size, self.n_channels, *self.dim))
-        rotated_X = np.empty((self.batch_size, self.n_channels, *self.dim))
-        shiftrotated_X = np.empty((self.batch_size, self.n_channels, *self.dim))
+        X = np.empty((self.batch_size, *self.dim))
+        shifted_X = np.empty((self.batch_size, *self.dim))
+        rotated_X = np.empty((self.batch_size, *self.dim))
+        shiftrotated_X = np.empty((self.batch_size, *self.dim))
         y = np.empty((self.batch_size), dtype=int)
 
         #load data and perform augmentation
@@ -93,13 +133,15 @@ class DataGenerator(keras.utils.Sequence):
             X[i,] = np.load('data/' + ID + '.npy')
             shifted_X[i] = random_shift(X[i])
             roated_X[i] = random_rotate(X[i])
-            shiftrotated_X = random_roate(shifted_X[i])            
+            zoomed_X = random_zoom_and_crop(X[i])            
 
             # Store class
             y[i] = self.labels[ID]
             
         #concatenate augmented data together
-        aug_X = np.concatenate((shifted_X, rotated_X, shiftrotated_X),axis=0)
+        aug_X = np.concatenate((shifted_X, rotated_X, zoomed_X),axis=0)
+        #expand dimension
+        aug_X = np.expand_dims(aug_X, axis=1)
         #concatenate labels for augmented data
         aug_y = np.concatenate((y,y,y),axis=0)
         aug_Y = keras.utils.to_categorical(aug_y, num_classes=self.n_classes)
