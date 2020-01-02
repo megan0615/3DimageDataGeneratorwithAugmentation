@@ -110,10 +110,10 @@ class DataGenerator(keras.utils.Sequence):
         if zoom[2] < 1:
             padding_width=orig_shape[2]-zoom_shape[2]
             z0 = np.zeros((x_y.shape[0], x_y.shape[1], padding_width), dtype=x.dtype)
-            x_z = np.concatenate((x_y,z0),axis=0)
+            x_z = np.concatenate((x_y,z0),axis=2)
         else:
             seed = random.randint(0,zoom_shape[0]-orig_shape[0])
-            x_z = x_y[seed:seed+origin_shape[0]][:][:]
+            x_z = x_y[:][:][seed:seed+origin_shape[0]]
             
         return x_z
             
