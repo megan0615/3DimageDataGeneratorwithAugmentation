@@ -26,10 +26,12 @@ class DataGenerator(keras.utils.Sequence):
         # Find list of IDs
         list_IDs_temp = [self.list_IDs[k] for k in indexes]
 
-        # Generate data
+        # load original data
         orig_X, orig_Y = self.__data_generation(list_IDs_temp)
+        # perform augmentation
         aug_X, aug_Y =self.__data_augmentation(list_IDs_temp)
         
+        #combine original and sumented data
         X = np.concatenate((orig_X,aug_X),aixs=0)
         Y = np.concatenate((orig_Y,aug_Y),aixs=0)
 
